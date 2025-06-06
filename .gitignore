@@ -1,0 +1,54 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+
+# Python environment metadata
+*.egg-info/
+pip-wheel-metadata/
+
+# Logs and job outputs (e.g., SLURM output)
+*.out
+*.err
+*.log
+slurm-*.out
+slurm-*.err
+
+# Data files
+*.csv
+*.tsv
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.joblib
+*.mat
+*.sqlite
+*.db
+
+# Large raw files or experimental output
+
+output/
+
+
+# VS Code settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary or backup files
+*.bak
+*.tmp
+*.swp
