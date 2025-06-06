@@ -528,10 +528,45 @@ class ChannelMetamerCTF(MetamerCTF):
         return fig
 
 
+###############################################################
+### Plots
+###############################################################
+
+
 def save_metamer_progress(
     metamer, img_name, output_dir, min_val, max_val, rgb2opc, opc2rgb
 ):
-    """Save metamer synthesis progress and results."""
+    """
+    Save all outputs from the metamer synthesis process, including visualizations,
+    intermediate progress, representation errors, loss curves, and metadata.
+
+    Parameters
+    ----------
+    metamer : Metamer
+        Metamer object containing the synthesized image, loss history, and optionally saved states.
+    img_name : str
+        Identifier name of the target image used to create directory structure.
+    output_dir : str
+        Path to the root directory where all outputs should be stored.
+    min_val : float or torch.Tensor
+        Minimum allowed value for OPC-rescaled images (used for range visualization).
+    max_val : float or torch.Tensor
+        Maximum allowed value for OPC-rescaled images (used for range visualization).
+    rgb2opc : torch.Tensor
+        Transformation matrix from RGB to OPC color space (unused in this function but may be saved).
+    opc2rgb : torch.Tensor
+        Transformation matrix from OPC to RGB color space, used for visualization.
+
+    Notes
+    -----
+    - Saves PNG images of the original and final metamer in both OPC and RGB spaces.
+    - Plots representation errors (final and optionally intermediate).
+    - Plots per-channel and overall loss curves.
+    - Generates OPC and RGB histograms.
+    - Saves intermediate metamer progress frames (if available).
+    - Stores all relevant synthesis metadata and model state in disk.
+    """
+
     # Create directory for this image
     img_output_dir = os.path.join(output_dir, f"metamer_{img_name}")
     os.makedirs(img_output_dir, exist_ok=True)
@@ -758,7 +793,7 @@ def save_metamer_progress(
 
     # Save channel losses
     channel_names = (
-        ["O₁", "O₂", "O₃"]
+        ["O1", "O2", "O3"]
         if len(metamer.channel_losses) == 3
         else [f"Ch{i}" for i in range(len(metamer.channel_losses))]
     )
@@ -800,151 +835,9 @@ def save_metamer_progress(
             ) as f:
                 json.dump(metamer._opc_range_stats, f, indent=2)
 
-            # Generate histograms of final OPC values
-            # with torch.no_grad():
-            #     final_metamer_opc = metamer.metamer.detach().cpu()
-            #     plt.figure(figsize=(15, 5))
-
-            #     # Overall histogram
-            #     plt.subplot(1, 2, 1)
-            #     all_values = final_metamer_opc.flatten().numpy()
-            #     plt.hist(all_values, bins=50, alpha=0.7)
-            #     plt.axvline(x=0, color="r", linestyle="--")
-            #     plt.axvline(x=1, color="r", linestyle="--")
-            #     plt.title("Distribution of All OPC Values")
-            #     plt.xlabel("Pixel Value")
-            #     plt.ylabel("Count")
-
-            #     # Per-channel histograms
-            #     plt.subplot(1, 2, 2)
-            #     n_channels = final_metamer_opc.shape[1]
-
-            #     channel_names = (
-            #         ["O1", "O2", "O3"]
-            #         if n_channels == 3
-            #         else [f"Ch{i + 1}" for i in range(n_channels)]
-            #     )
-
-            #     for c in range(n_channels):
-            #         channel_values = final_metamer_opc[:, c].flatten().numpy()
-            #         plt.hist(channel_values, bins=50, alpha=0.5, label=channel_names[c])
-
-            #     plt.axvline(x=0, color="r", linestyle="--")
-            #     plt.axvline(x=1, color="r", linestyle="--")
-            #     plt.title("Distribution of OPC Values by Channel")
-            #     plt.xlabel("Pixel Value")
-            #     plt.ylabel("Count")
-            #     plt.legend()
-
-            #     plt.tight_layout()
-            #     plt.savefig(
-            #         os.path.join(opc_analysis_dir, "opc_value_distribution.png")
-            #     )
-            #     plt.close()
-
-            #     # Save the raw OPC tensor data as NumPy array for further analysis
-            #     np.save(
-            #         os.path.join(opc_analysis_dir, "metamer_opc_values.npy"),
-            #         final_metamer_opc.numpy(),
-            #     )
-
-            #     # Save a text file with summary statistics
-            #     with open(os.path.join(opc_analysis_dir, "opc_summary.txt"), "w") as f:
-            #         f.write(f"OPC Value Analysis for {img_name}\n")
-            #         f.write("=================================\n\n")
-            #         f.write("Overall Statistics:\n")
-            #         f.write(f"  Min: {final_metamer_opc.min().item():.6f}\n")
-            #         f.write(f"  Max: {final_metamer_opc.max().item():.6f}\n")
-            #         f.write(f"  Mean: {final_metamer_opc.mean().item():.6f}\n")
-            #         f.write(f"  Std: {final_metamer_opc.std().item():.6f}\n")
-            #         f.write(
-            #             f"  Values < 0: {(final_metamer_opc < 0).sum().item()} ({(final_metamer_opc < 0).sum().item() / final_metamer_opc.numel() * 100:.2f}%)\n"
-            #         )
-            #         f.write(
-            #             f"  Values > 1: {(final_metamer_opc > 1).sum().item()} ({(final_metamer_opc > 1).sum().item() / final_metamer_opc.numel() * 100:.2f}%)\n\n"
-            #         )
-
-            #         f.write("Per-Channel Statistics:\n")
-            #         for c in range(n_channels):
-            #             channel_data = final_metamer_opc[:, c]
-            #             f.write(f"  Channel {channel_names[c]}:\n")
-            #             f.write(f"    Min: {channel_data.min().item():.6f}\n")
-            #             f.write(f"    Max: {channel_data.max().item():.6f}\n")
-            #             f.write(f"    Mean: {channel_data.mean().item():.6f}\n")
-            #             f.write(f"    Std: {channel_data.std().item():.6f}\n")
-            #             f.write(
-            #                 f"    Values < 0: {(channel_data < 0).sum().item()} ({(channel_data < 0).sum().item() / channel_data.numel() * 100:.2f}%)\n"
-            #             )
-            #             f.write(
-            #                 f"    Values > 1: {(channel_data > 1).sum().item()} ({(channel_data > 1).sum().item() / channel_data.numel() * 100:.2f}%)\n\n"
-            #             )
-            # Generate histograms of input and metamer values in both OPC and RGB spaces
-            # print("Generating OPC and RGB histograms for input and metamer...")
-
-            # with torch.no_grad():
-            #     final_metamer_opc = metamer.metamer.detach().cpu()
-            #     original_img_opc = metamer.image.detach().cpu()
-
-            #     # Convert to RGB
-            #     final_metamer_rgb = img_transforms.color_transform_image(
-            #         final_metamer_opc, opc2rgb_cpu
-            #     ).cpu()
-            #     original_img_rgb = img_transforms.color_transform_image(
-            #         original_img_opc, opc2rgb_cpu
-            #     ).cpu()
-
-            #     # Prepare data
-            #     def flatten(img):
-            #         return img[0].flatten().numpy()
-
-            #     opc_input_vals = flatten(original_img_opc)
-            #     opc_metamer_vals = flatten(final_metamer_opc)
-            #     rgb_input_vals = flatten(original_img_rgb)
-            #     rgb_metamer_vals = flatten(final_metamer_rgb)
-
-            #     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-            #     bins = 100
-
-            #     def plot_hist(ax, values, title, allowed_range):
-            #         ax.hist(values, bins=bins, color="steelblue", alpha=0.7)
-            #         ax.axvline(
-            #             x=0, color="gray", linestyle="--", linewidth=1, alpha=0.6
-            #         )
-            #         ax.axvline(
-            #             x=1, color="gray", linestyle="--", linewidth=1, alpha=0.6
-            #         )
-            #         ax.axvline(
-            #             x=allowed_range[0],
-            #             color="red",
-            #             linestyle="--",
-            #             linewidth=1,
-            #             label="Allowed Min",
-            #         )
-            #         ax.axvline(
-            #             x=allowed_range[1],
-            #             color="red",
-            #             linestyle="--",
-            #             linewidth=1,
-            #             label="Allowed Max",
-            #         )
-            #         ax.set_title(title)
-            #         ax.set_xlabel("Pixel Value")
-            #         ax.set_ylabel("Frequency")
-            #         ax.legend()
-            #         ax.grid(True, alpha=0.3)
-
-            #     plot_hist(
-            #         axes[0, 0], opc_input_vals, "Input Image (OPC)", allowed_range
-            #     )
-            #     plot_hist(axes[0, 1], rgb_input_vals, "Input Image (RGB)", (0, 1))
-            #     plot_hist(
-            #         axes[1, 0], opc_metamer_vals, "Metamer Image (OPC)", allowed_range
-            #     )
-            #     plot_hist(axes[1, 1], rgb_metamer_vals, "Metamer Image (RGB)", (0, 1))
-
-            #     plt.tight_layout()
-            #     plt.savefig(os.path.join(opc_analysis_dir, "opc_rgb_histograms.png"))
-            #     plt.close()
+            ###############################################################
+            ### OPC and RGB Histograms
+            ###############################################################
             print("Generating per-channel OPC and RGB histograms...")
 
             with torch.no_grad():
@@ -1191,7 +1084,53 @@ def get_slurm_info():
 
 
 def main():
-    """Main function to run the metamer synthesis."""
+    """
+    Entry point for running color metamer synthesis over a set of input images.
+
+    This script loads and preprocesses input images, performs metamer synthesis using a
+    Portilla-Simoncelli-based model extended with cross-channel statistics, and saves all
+    outputs including synthesis results, progress visualizations, loss curves, and metadata.
+
+    Command-line Arguments
+    ----------------------
+    --input_dir : str
+        Directory containing input RGB images.
+    --output_dir : str
+        Directory where synthesis results and logs will be stored.
+    --max_iter : int, optional
+        Maximum number of optimization iterations (default: 5000).
+    --store_progress : int, optional
+        Frequency of saving progress frames (set to 0 to disable, default: 50).
+    --img_size : int, optional
+        Size to which input images are resized (default: 256).
+    --coarse_to_fine : {'together', 'separate'}, optional
+        Strategy for multi-scale optimization (default: 'together').
+    --stop_criterion : float, optional
+        Threshold for early stopping based on loss change (default: 1e-6).
+    --range_penalty : float, optional
+        Penalty weight for pixel values falling outside allowed OPC range.
+    --scale_ch_covar : float, optional
+        Scaling factor for channel covariance terms (default: 10.0).
+    --scale_ch_mag : float, optional
+        Scaling factor for magnitude correlations (default: 1.0).
+    --scale_ch_real : float, optional
+        Scaling factor for real-valued correlations (default: 1.0).
+    --num_images : int, optional
+        Number of images to process (default: all).
+    --device : str, optional
+        Compute device (e.g., 'cuda', 'cpu'); if unspecified, auto-detected.
+    --seed : int, optional
+        Random seed for reproducibility (default: 1).
+
+    Notes
+    -----
+    - Generates a timestamped output directory containing per-image results.
+    - Logs synthesis configurations, SLURM job info (if available), and timing metadata.
+    - For each image, performs conversion to opponent color space, initializes a metamer,
+      and runs gradient-based optimization.
+    - Delegates result saving to `save_metamer_progress`, including visual outputs and serialized state.
+    """
+
     parser = argparse.ArgumentParser(
         description="Run color metamer synthesis on images"
     )
